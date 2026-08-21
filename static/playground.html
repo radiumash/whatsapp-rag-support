@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Universal RAG Tester</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            sidebar: '#171717',
+            chatbg: '#212121',
+            inputbg: '#2f2f2f',
+            userbubble: '#2f2f2f',
+            botbubble: '#212121'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #424242; border-radius: 4px; }
+    textarea:focus, input:focus { outline: none; }
+  </style>
+</head>
+<body class="bg-chatbg text-[#ececec] font-sans antialiased h-screen flex overflow-hidden">
+
+  <!-- Left Sidebar -->
+  <aside class="w-80 bg-sidebar flex-shrink-0 flex flex-col justify-between hidden md:flex border-r border-[#2d2d2d] p-4">
+    <div class="space-y-4">
+      <div class="flex items-center justify-between pt-1">
+        <span class="font-semibold text-sm text-gray-200">Knowledge Lab</span>
+        <span class="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full border border-purple-500/30">Multi-Source</span>
+      </div>
+
+      <!-- Source Ingestion Tabs -->
+      <div class="flex p-1 bg-[#222] rounded-xl border border-[#333] text-xs">
+        <button id="tab-file" onclick="switchSourceTab('file')" class="flex-1 py-1.5 rounded-lg font-medium bg-[#333] text-white transition">Upload File</button>
+        <button id="tab-url" onclick="switchSourceTab('url')" class="flex-1 py-1.5 rounded-lg font-medium text-gray-400 hover:text-white transition">Web URL</button>
+      </div>
+
+      <!-- Option 1: File Uploader (.pdf, .xlsx, .csv, .txt, .md) -->
+      <div id="panel-file" class="space-y-2">
+        <label for="any-file-input" class="flex flex-col items-center justify-center p-4 border border-dashed border-[#444] hover:border-gray-400 rounded-xl bg-[#212121] cursor-pointer transition">
+          <svg class="w-6 h-6 text-emerald-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+          </svg>
+          <span class="text-xs font-medium text-gray-300">Choose File (Max 8 MB)</span>
+          <span class="text-[10px] text-gray-500 mt-1">PDF, Excel, CSV, TXT, MD</span>
+        </label>
+        <input type="file" id="any-file-input" accept=".pdf,.xlsx,.xls,.csv,.txt,.md" class="hidden" onchange="handleFileUpload(event)" />
+      </div>
+
+      <!-- Option 2: Live Web URL Scraper -->
+      <div id="panel-url" class="hidden space-y-2">
+        <div class="flex space-x-1.5">
+          <input
+            type="url"
+            id="web-url-input"
+            placeholder="https://example.com/help..."
+            class="flex-1 bg-inputbg border border-[#3e3e3e] rounded-xl px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:border-gray-400"
+          />
+          <button onclick="handleUrlIngest()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition">
+            Scrape
+          </button>
+        </div>
+        <p class="text-[10px] text-gray-500">Extracts clean text & indexes content automatically.</p>
+      </div>
+
+      <!-- Active Ingested Source Info Box -->
+      <div id="active-file-card" class="hidden p-3 bg-inputbg rounded-xl border border-emerald-500/30 space-y-2">
+        <div class="flex items-center space-x-2 text-emerald-400 text-xs font-semibold">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+          </svg>
+          <span>Indexed & Active</span>
+        </div>
+        <div>
+          <p id="active-filename" class="text-xs text-gray-200 truncate font-medium"></p>
+          <p id="active-chunks-count" class="text-[11px] text-gray-400"></p>
+        </div>
+        
+        <!-- View Chunks Button -->
+        <button onclick="toggleChunksDrawer(true)" class="w-full mt-1 px-2.5 py-1.5 bg-[#3a3a3a] hover:bg-[#444] text-xs font-medium text-gray-200 rounded-lg flex items-center justify-center space-x-1.5 transition">
+          <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+          </svg>
+          <span>View Indexed Chunks</span>
+        </button>
+      </div>
+
+      <!-- Tech highlights -->
+      <div class="text-[11px] text-gray-400 space-y-1 pt-1">
+        <p>• <strong>Supported:</strong> PDF, XLSX, CSV, TXT, Web URLs</p>
+        <p>• <strong>Models:</strong> `text-embedding-3-large` + `gpt-4o`</p>
+        <p>• <strong>Language:</strong> Native English & Hinglish</p>
+      </div>
+    </div>
+
+    <!-- Footer Back Link -->
+    <div class="pt-2 border-t border-[#2d2d2d]">
+      <a href="/" class="flex items-center space-x-2 text-xs text-gray-400 hover:text-gray-200 px-2 py-1 transition">
+        <span>← Back to WhatsApp Bot</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Chat Section -->
+  <main class="flex-1 flex flex-col h-screen relative">
+    
+    <!-- Top Bar -->
+    <header class="h-12 border-b border-[#2d2d2d] flex items-center justify-between px-4 text-sm font-semibold text-gray-300">
+      <div class="flex items-center space-x-2">
+        <span>Multi-Source RAG Evaluation Studio</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button id="view-chunks-nav-btn" onclick="toggleChunksDrawer(true)" class="hidden text-xs bg-[#2e2e2e] hover:bg-[#383838] border border-[#444] px-2.5 py-1 rounded-lg text-gray-300 transition">
+          Inspect Chunks
+        </button>
+        <div id="status-pill" class="text-xs px-2.5 py-1 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+          No Knowledge Indexed
+        </div>
+      </div>
+    </header>
+
+    <!-- Message Stream -->
+    <div id="chat-container" class="flex-1 overflow-y-auto px-4 md:px-32 lg:px-64 py-6 space-y-6">
+      
+      <!-- Welcome Hero -->
+      <div id="welcome-view" class="h-full flex flex-col items-center justify-center text-center space-y-4 my-auto">
+        <div class="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-[#333]">
+          <svg class="w-7 h-7 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+          </svg>
+        </div>
+        <h2 class="text-xl font-semibold">Test Any Document, Sheet, or URL</h2>
+        <p class="text-xs text-gray-400 max-w-sm">Upload a PDF, Excel sheet, CSV, or paste a Web URL in the sidebar. Once parsed, query it in English or Hinglish.</p>
+      </div>
+
+    </div>
+
+    <!-- Ingestion Progress Modal -->
+    <div id="upload-spinner" class="hidden absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+      <div class="bg-[#242424] border border-[#3a3a3a] p-6 rounded-2xl flex flex-col items-center space-y-3 shadow-2xl max-w-sm mx-4">
+        <div class="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        <p class="text-sm font-semibold text-gray-100">Processing Knowledge Source...</p>
+        <p class="text-xs text-gray-400 text-center">Parsing records, generating embeddings, and updating Pinecone vector index.</p>
+      </div>
+    </div>
+
+    <!-- Input Footer -->
+    <div class="px-4 md:px-32 lg:px-64 pb-6 pt-2">
+      <div class="relative bg-inputbg rounded-2xl border border-[#3e3e3e] shadow-lg flex items-center focus-within:border-gray-400 transition-colors">
+        <textarea
+          id="user-input"
+          rows="1"
+          disabled
+          placeholder="Upload a file or URL above to start testing..."
+          class="w-full bg-transparent text-gray-200 placeholder-gray-500 px-4 py-3 resize-none max-h-32 text-sm disabled:cursor-not-allowed"
+          onkeydown="handleKeyDown(event)"
+          oninput="autoResize(this)"
+        ></textarea>
+        <button
+          id="send-btn"
+          disabled
+          onclick="sendMessage()"
+          class="m-2 p-2 bg-white text-black rounded-full hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Side Drawer for Chunks Inspector -->
+  <div id="chunks-drawer-backdrop" onclick="toggleChunksDrawer(false)" class="hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-[2px]"></div>
+  
+  <div id="chunks-drawer" class="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[#1e1e1e] border-l border-[#333] shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+    <div class="p-4 border-b border-[#2d2d2d] flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="font-semibold text-sm text-gray-200">Indexed Chunks</span>
+        <span id="drawer-badge" class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-mono">0 Chunks</span>
+      </div>
+      <button onclick="toggleChunksDrawer(false)" class="p-1 text-gray-400 hover:text-white rounded-lg hover:bg-[#2d2d2d]">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div id="chunks-list" class="flex-1 overflow-y-auto p-4 space-y-3">
+      <!-- Injected -->
+    </div>
+  </div>
+
+  <script>
+    const sessionId = "tester_" + Math.random().toString(36).substr(2, 9);
+    const chatContainer = document.getElementById("chat-container");
+    const userInput = document.getElementById("user-input");
+    const sendBtn = document.getElementById("send-btn");
+    const welcomeView = document.getElementById("welcome-view");
+    const uploadSpinner = document.getElementById("upload-spinner");
+    const statusPill = document.getElementById("status-pill");
+
+    function switchSourceTab(type) {
+      const isFile = type === 'file';
+      document.getElementById("panel-file").classList.toggle("hidden", !isFile);
+      document.getElementById("panel-url").classList.toggle("hidden", isFile);
+
+      document.getElementById("tab-file").className = isFile 
+        ? "flex-1 py-1.5 rounded-lg font-medium bg-[#333] text-white transition"
+        : "flex-1 py-1.5 rounded-lg font-medium text-gray-400 hover:text-white transition";
+
+      document.getElementById("tab-url").className = !isFile 
+        ? "flex-1 py-1.5 rounded-lg font-medium bg-[#333] text-white transition"
+        : "flex-1 py-1.5 rounded-lg font-medium text-gray-400 hover:text-white transition";
+    }
+
+    function autoResize(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = (textarea.scrollHeight) + 'px';
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    }
+
+    function toggleChunksDrawer(open) {
+      const drawer = document.getElementById("chunks-drawer");
+      const backdrop = document.getElementById("chunks-drawer-backdrop");
+      if (open) {
+        drawer.classList.remove("translate-x-full");
+        backdrop.classList.remove("hidden");
+      } else {
+        drawer.classList.add("translate-x-full");
+        backdrop.classList.add("hidden");
+      }
+    }
+
+    function renderChunksList(chunks) {
+      const listContainer = document.getElementById("chunks-list");
+      const badge = document.getElementById("drawer-badge");
+      listContainer.innerHTML = "";
+      badge.textContent = `${chunks.length} Chunks`;
+
+      chunks.forEach(chunk => {
+        const item = document.createElement("div");
+        item.className = "p-3 bg-[#262626] border border-[#383838] rounded-xl space-y-1.5 text-xs";
+        item.innerHTML = `
+          <div class="flex items-center justify-between text-gray-400 border-b border-[#333] pb-1.5">
+            <span class="font-semibold text-emerald-400">Chunk #${chunk.id}</span>
+            <div class="flex items-center space-x-2 text-[11px]">
+              <span>Ref: ${chunk.page_or_row}</span>
+              <span>•</span>
+              <span>${chunk.char_count} chars</span>
+            </div>
+          </div>
+          <p class="text-gray-300 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">${chunk.text}</p>
+        `;
+        listContainer.appendChild(item);
+      });
+    }
+
+    function activateKnowledgeUI(sourceName, chunksCount, chunks) {
+      userInput.disabled = false;
+      sendBtn.disabled = false;
+      userInput.placeholder = "Ask anything in English or Hinglish...";
+
+      statusPill.textContent = "Knowledge Ready";
+      statusPill.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+
+      document.getElementById("active-file-card").classList.remove("hidden");
+      document.getElementById("view-chunks-nav-btn").classList.remove("hidden");
+      document.getElementById("active-filename").textContent = sourceName;
+      document.getElementById("active-chunks-count").textContent = `${chunksCount} chunks indexed`;
+
+      renderChunksList(chunks);
+
+      if (welcomeView) welcomeView.style.display = "none";
+      appendMessage("bot", `✅ **${sourceName}** is indexed and ready! Generated **${chunksCount} chunks**. You can inspect the chunks or ask questions in English/Hinglish.`);
+    }
+
+    async function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const MAX_SIZE = 8 * 1024 * 1024;
+      if (file.size > MAX_SIZE) {
+        alert("File too large! Please upload a file under 8 MB.");
+        event.target.value = "";
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("session_id", sessionId);
+
+      uploadSpinner.classList.remove("hidden");
+
+      try {
+        const response = await fetch("/api/upload_any", {
+          method: "POST",
+          body: formData
+        });
+        const data = await response.json();
+        uploadSpinner.classList.add("hidden");
+
+        if (response.ok) {
+          activateKnowledgeUI(data.source_name, data.chunks_count, data.chunks);
+        } else {
+          alert(`Upload error: ${data.detail}`);
+        }
+      } catch (err) {
+        uploadSpinner.classList.add("hidden");
+        alert("Error indexing file.");
+      }
+    }
+
+    async function handleUrlIngest() {
+      const urlInput = document.getElementById("web-url-input");
+      const url = urlInput.value.trim();
+      if (!url) return;
+
+      uploadSpinner.classList.remove("hidden");
+
+      try {
+        const response = await fetch("/api/index_url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: url, session_id: sessionId })
+        });
+        const data = await response.json();
+        uploadSpinner.classList.add("hidden");
+
+        if (response.ok) {
+          activateKnowledgeUI(data.source_name, data.chunks_count, data.chunks);
+          urlInput.value = "";
+        } else {
+          alert(`URL Error: ${data.detail}`);
+        }
+      } catch (err) {
+        uploadSpinner.classList.add("hidden");
+        alert("Error scraping URL.");
+      }
+    }
+
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      if (!text) return;
+
+      appendMessage("user", text);
+      userInput.value = "";
+      userInput.style.height = "auto";
+
+      const loadingId = appendLoading();
+
+      try {
+        const response = await fetch("/api/playground_chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, session_id: sessionId })
+        });
+
+        const data = await response.json();
+        removeMessage(loadingId);
+        appendMessage("bot", data.reply);
+      } catch (err) {
+        removeMessage(loadingId);
+        appendMessage("bot", "⚠️ Error generating response.");
+      }
+    }
+
+    function appendMessage(role, content) {
+      const isUser = role === "user";
+      const wrapper = document.createElement("div");
+      wrapper.className = `flex ${isUser ? "justify-end" : "justify-start"} w-full`;
+
+      const bubble = document.createElement("div");
+      bubble.className = isUser 
+        ? "bg-userbubble text-white px-4 py-2.5 rounded-3xl max-w-[80%] text-sm"
+        : "text-gray-200 px-2 py-1 max-w-[85%] text-sm leading-relaxed prose prose-invert";
+
+      if (isUser) {
+        bubble.textContent = content;
+      } else {
+        bubble.innerHTML = marked.parse(content);
+      }
+
+      wrapper.appendChild(bubble);
+      chatContainer.appendChild(wrapper);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      return wrapper;
+    }
+
+    function appendLoading() {
+      const id = "loading-" + Date.now();
+      const wrapper = document.createElement("div");
+      wrapper.id = id;
+      wrapper.className = "flex justify-start w-full";
+      wrapper.innerHTML = `
+        <div class="flex items-center space-x-1.5 px-4 py-2 bg-inputbg rounded-full text-gray-400 text-xs animate-pulse">
+          <div class="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+          <div class="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+          <div class="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+        </div>
+      `;
+      chatContainer.appendChild(wrapper);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      return id;
+    }
+
+    function removeMessage(id) {
+      const elem = document.getElementById(id);
+      if (elem) elem.remove();
+    }
+  </script>
+</body>
+</html>

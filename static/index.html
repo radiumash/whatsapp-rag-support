@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support Assistant</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            sidebar: '#171717',
+            chatbg: '#212121',
+            inputbg: '#2f2f2f',
+            userbubble: '#2f2f2f',
+            botbubble: '#212121'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #424242; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
+    textarea:focus { outline: none; }
+  </style>
+</head>
+<body class="bg-chatbg text-[#ececec] font-sans antialiased h-screen flex overflow-hidden">
+
+  <!-- Left Sidebar -->
+  <aside class="w-64 bg-sidebar flex-shrink-0 flex flex-col justify-between hidden md:flex border-r border-[#2d2d2d] p-3">
+    <div class="flex flex-col space-y-2">
+      <!-- New Chat Button -->
+      <button onclick="newChat()" class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg hover:bg-[#212121] transition border border-[#333]">
+        <div class="flex items-center space-x-2">
+          <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          <span>New Chat</span>
+        </div>
+      </button>
+
+      <!-- History List -->
+      <div class="text-xs font-semibold text-gray-400 px-3 pt-4 uppercase tracking-wider">Recent Chats</div>
+      <div class="overflow-y-auto space-y-1">
+        <div class="p-2 text-sm text-gray-300 rounded hover:bg-[#212121] cursor-pointer truncate">📦 Return & Refund Help</div>
+        <div class="p-2 text-sm text-gray-300 rounded hover:bg-[#212121] cursor-pointer truncate">💳 Payment Failure Issue</div>
+      </div>
+    </div>
+
+    <!-- User / Profile bottom footer -->
+    <div class="pt-2 border-t border-[#2d2d2d] flex items-center justify-between px-2 text-sm text-gray-400">
+      <div class="flex items-center space-x-2">
+        <div class="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-white text-xs">AI</div>
+        <span class="font-medium text-gray-200">Customer Support</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Chat Section -->
+  <main class="flex-1 flex flex-col h-screen relative">
+    
+    <!-- Top Header -->
+    <header class="h-12 border-b border-[#2d2d2d] flex items-center justify-between px-4 text-sm font-semibold text-gray-300">
+      <div class="flex items-center space-x-2">
+        <span>RAG Support Assistant</span>
+        <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Hinglish + English</span>
+      </div>
+    </header>
+
+    <!-- Message Stream -->
+    <div id="chat-container" class="flex-1 overflow-y-auto px-4 md:px-32 lg:px-64 py-6 space-y-6">
+      
+      <!-- Welcome Hero (Visible when empty) -->
+      <div id="welcome-view" class="h-full flex flex-col items-center justify-center text-center space-y-4 my-auto">
+        <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
+          <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+          </svg>
+        </div>
+        <h2 class="text-xl font-semibold">How can we help you today?</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-lg w-full text-left pt-4">
+          <button onclick="sendQuickPrompt('Return kitne din me ho sakta hai?')" class="p-3 bg-inputbg rounded-xl border border-[#3e3e3e] hover:border-gray-500 text-xs text-gray-300">
+            <span class="font-medium text-white block mb-1">📦 Return Policy (Hinglish)</span>
+            "Return kitne din me ho sakta hai?"
+          </button>
+          <button onclick="sendQuickPrompt('What happens if double payment is deducted?')" class="p-3 bg-inputbg rounded-xl border border-[#3e3e3e] hover:border-gray-500 text-xs text-gray-300">
+            <span class="font-medium text-white block mb-1">💳 Payment Query (English)</span>
+            "What happens if double payment is deducted?"
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Input Footer -->
+    <div class="px-4 md:px-32 lg:px-64 pb-6 pt-2">
+      <div class="relative bg-inputbg rounded-2xl border border-[#3e3e3e] shadow-lg flex items-center focus-within:border-gray-400 transition-colors">
+        <textarea
+          id="user-input"
+          rows="1"
+          placeholder="Ask in English or Hinglish (e.g. 'Mera refund kab aayega?')..."
+          class="w-full bg-transparent text-gray-200 placeholder-gray-400 px-4 py-3 resize-none max-h-32 text-sm"
+          onkeydown="handleKeyDown(event)"
+          oninput="autoResize(this)"
+        ></textarea>
+        <button
+          id="send-btn"
+          onclick="sendMessage()"
+          class="m-2 p-2 bg-white text-black rounded-full hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+          </svg>
+        </button>
+      </div>
+      <p class="text-center text-[11px] text-gray-400 mt-2">AI-generated responses are derived strictly from support documentation.</p>
+    </div>
+
+  </main>
+
+  <script>
+    const chatContainer = document.getElementById("chat-container");
+    const userInput = document.getElementById("user-input");
+    const welcomeView = document.getElementById("welcome-view");
+    let sessionId = "session_" + Math.random().toString(36).substr(2, 9);
+
+    function autoResize(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = (textarea.scrollHeight) + 'px';
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    }
+
+    function sendQuickPrompt(text) {
+      userInput.value = text;
+      sendMessage();
+    }
+
+    function newChat() {
+      sessionId = "session_" + Math.random().toString(36).substr(2, 9);
+      chatContainer.innerHTML = '';
+      chatContainer.appendChild(welcomeView);
+      welcomeView.style.display = "flex";
+      userInput.value = "";
+    }
+
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      if (!text) return;
+
+      if (welcomeView) {
+        welcomeView.style.display = "none";
+      }
+
+      // 1. Render User Message
+      appendMessage("user", text);
+      userInput.value = "";
+      userInput.style.height = "auto";
+
+      // 2. Render Bot Loading Bubble
+      const loadingId = appendLoading();
+
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, session_id: sessionId })
+        });
+
+        const data = await response.json();
+        removeMessage(loadingId);
+        appendMessage("bot", data.reply);
+      } catch (err) {
+        removeMessage(loadingId);
+        appendMessage("bot", "⚠️ Server Error. Please check backend connection.");
+      }
+    }
+
+    function appendMessage(role, content) {
+      const isUser = role === "user";
+      const wrapper = document.createElement("div");
+      wrapper.className = `flex ${isUser ? "justify-end" : "justify-start"} w-full`;
+
+      const bubble = document.createElement("div");
+      bubble.className = isUser 
+        ? "bg-userbubble text-white px-4 py-2.5 rounded-3xl max-w-[80%] text-sm"
+        : "text-gray-200 px-2 py-1 max-w-[85%] text-sm leading-relaxed prose prose-invert";
+
+      if (isUser) {
+        bubble.textContent = content;
+      } else {
+        bubble.innerHTML = marked.parse(content);
+      }
+
+      wrapper.appendChild(bubble);
+      chatContainer.appendChild(wrapper);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      return wrapper;
+    }
+
+    function appendLoading() {
+      const id = "loading-" + Date.now();
+      const wrapper = document.createElement("div");
+      wrapper.id = id;
+      wrapper.className = "flex justify-start w-full";
+      wrapper.innerHTML = `
+        <div class="flex items-center space-x-1.5 px-4 py-2 bg-inputbg rounded-full text-gray-400 text-xs animate-pulse">
+          <div class="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+          <div class="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+          <div class="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+        </div>
+      `;
+      chatContainer.appendChild(wrapper);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      return id;
+    }
+
+    function removeMessage(id) {
+      const elem = document.getElementById(id);
+      if (elem) elem.remove();
+    }
+  </script>
+</body>
+</html>

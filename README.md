@@ -1,6 +1,5 @@
 Here is a complete, production-ready `README.md` for your GitHub repository.
 
-```markdown
 # 💬 Multilingual WhatsApp & Multi-Source RAG Support System
 
 An intelligent, production-ready customer support system built with **FastAPI**, **LangChain**, **Pinecone**, and **OpenAI**. The system provides automated customer support over **WhatsApp Cloud API** and includes a **ChatGPT-style Web Playground** capable of indexing and chatting with PDFs, Excel sheets, CSVs, plain text, and live web URLs with native **English & Hinglish** (Hindi in Roman script) support.
@@ -56,21 +55,7 @@ whatsapp-rag-bot/
 ├── .gitignore                # Git exclusions
 ├── .python-version           # Specifies Python 3.12 for cloud platforms
 └── requirements.txt          # Python dependencies
-
 ```
-
----
-
-## ⚙️ Prerequisites & Setup
-
-### 1. Clone the Repository
-
-```bash
-git clone [https://github.com/YOUR_USERNAME/whatsapp-rag-support.git](https://github.com/YOUR_USERNAME/whatsapp-rag-support.git)
-cd whatsapp-rag-support
-
-```
-
 ### 2. Create Virtual Environment
 
 ```bash
@@ -81,9 +66,7 @@ source venv/bin/activate
 
 # On Windows:
 venv\Scripts\activate
-
 ```
-
 ### 3. Install Dependencies
 
 ```bash
@@ -191,6 +174,3 @@ npx localtunnel --port 8000
 
 MIT License. Feel free to use and modify for personal and commercial projects.
 
-```
-
-```

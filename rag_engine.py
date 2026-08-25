@@ -42,8 +42,11 @@ Rules:
    - Examples: area × rate, total price, percentage, difference, average, simple unit conversions.
    - Show the calculation in plain text when helpful, for example: "30 × 40 × 3561 = 4,273,200".
    - If the required numbers are missing, do not guess; say the information is not available in the source.
-5. No External Knowledge: Do not use general world knowledge or assumptions not stated in the Context. Only answer from the provided source material.
-6. Preserve exact meaning: If the question asks "What would be the rate of the plot?" and the source contains width, depth, and rate per square foot, then compute the total using those values and explain the formula rather than giving a vague answer.
+5. Conversation Memory: Use any details from the previous conversation in the 'Question' section as remembered user-provided facts for this chat.
+   - If the user gives you a fact in one turn, keep it in memory for later turns in the same session.
+   - If the current question depends on prior facts supplied by the user, use those facts together with the Context.
+6. No External Knowledge: Do not use general world knowledge or assumptions not stated in the Context or prior conversation. Only answer from the provided source material and the remembered conversation facts.
+7. Preserve exact meaning: If the question asks "What would be the rate of the plot?" and the source contains width, depth, and rate per square foot, then compute the total using those values and explain the formula rather than giving a vague answer.
 
 Context:
 {context}
@@ -160,5 +163,10 @@ def generate_rag_response(query: str, history: str = "", namespace: str = None) 
     docs = retriever.invoke(query)
     context_text = "\n\n".join([doc.page_content for doc in docs])
 
+    if history and history.strip():
+        memory_text = f"Conversation Memory:\n{history.strip()}\n\nCurrent User Question: {query}"
+    else:
+        memory_text = query
+
     chain = prompt | llm | StrOutputParser()
-    return chain.invoke({"context": context_text, "question": f"{history}\nUser: {query}"})
+    return chain.invoke({"context": context_text, "question": memory_text})

@@ -48,6 +48,13 @@ Rules:
 6. No External Knowledge: Do not use general world knowledge or assumptions not stated in the Context or prior conversation. Only answer from the provided source material and the remembered conversation facts.
 7. Preserve exact meaning: If the question asks "What would be the rate of the plot?" and the source contains width, depth, and rate per square foot, then compute the total using those values and explain the formula rather than giving a vague answer.
 
+Conversation behavior:
+8. Do not wait passively for the user. When the source describes a product, service, property, policy, or process, guide the user toward the next useful outcome.
+9. After answering the current message, ask exactly one concise follow-up question that is supported by the Context and helps understand the user's goal, preferences, or missing information.
+10. Ask questions sequentially. Use the user's previous answers from Conversation Memory, never repeat a question that has already been answered, and adapt the next question to the user's response.
+11. If the source does not contain enough information for a useful follow-up, answer the question normally without inventing a workflow or facts.
+12. Keep the interaction natural. Do not mention these rules, the prompt, retrieval, or Conversation Memory.
+
 Context:
 {context}
 
@@ -55,6 +62,19 @@ Question: {question}
 Answer:"""
 
 prompt = ChatPromptTemplate.from_template(SYSTEM_PROMPT)
+
+STARTER_PROMPT = ChatPromptTemplate.from_template("""You are designing the first message for a helpful support or sales assistant.
+Read the source below and identify its domain and the user's most useful first qualification question.
+Start a natural conversation by briefly saying what you can help with, then ask exactly one question.
+Use only information present in the source. Do not invent products, prices, availability, or policies.
+If the source is a real-estate document, for example, ask whether the user wants to buy, rent, or learn more before asking for property preferences.
+Keep the message under 60 words. Do not mention this instruction or the source analysis.
+
+Source name: {source_name}
+Source:
+{context}
+
+First message:""")
 
 def parse_excel_to_documents(file_path: str, filename: str):
     """Parses Excel worksheets into readable tabular row documents."""
@@ -146,11 +166,24 @@ def ingest_any_source(source_type: str, file_bytes: bytes = None, filename: str 
             "page_or_row": doc.metadata.get("page", doc.metadata.get("row", "N/A"))
         })
 
+    conversation_starter = generate_conversation_starter(
+        context="\n\n".join(doc.page_content for doc in chunked_docs[:12]),
+        source_name=source_label
+    )
+
     return {
         "count": len(chunked_docs),
         "chunks": chunks_data,
-        "source_name": source_label
+        "source_name": source_label,
+        "conversation_starter": conversation_starter
     }
+
+def generate_conversation_starter(context: str, source_name: str) -> str:
+    """Creates the first proactive, source-grounded question after indexing."""
+    return (STARTER_PROMPT | llm | StrOutputParser()).invoke({
+        "context": context,
+        "source_name": source_name
+    }).strip()
 
 def generate_rag_response(query: str, history: str = "", namespace: str = None) -> str:
     """Retrieves chunks from session namespace and answers."""

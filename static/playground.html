@@ -272,7 +272,7 @@
       });
     }
 
-    function activateKnowledgeUI(sourceName, chunksCount, chunks) {
+    function activateKnowledgeUI(sourceName, chunksCount, chunks, conversationStarter) {
       userInput.disabled = false;
       sendBtn.disabled = false;
       userInput.placeholder = "Ask anything in English or Hinglish...";
@@ -288,7 +288,7 @@
       renderChunksList(chunks);
 
       if (welcomeView) welcomeView.style.display = "none";
-      appendMessage("bot", `✅ **${sourceName}** is indexed and ready! Generated **${chunksCount} chunks**. You can inspect the chunks or ask questions in English/Hinglish.`);
+      appendMessage("bot", conversationStarter || `✅ **${sourceName}** is indexed and ready! Generated **${chunksCount} chunks**. What would you like help with?`);
     }
 
     async function handleFileUpload(event) {
@@ -317,7 +317,7 @@
         uploadSpinner.classList.add("hidden");
 
         if (response.ok) {
-          activateKnowledgeUI(data.source_name, data.chunks_count, data.chunks);
+          activateKnowledgeUI(data.source_name, data.chunks_count, data.chunks, data.conversation_starter);
         } else {
           alert(`Upload error: ${data.detail}`);
         }
@@ -344,7 +344,7 @@
         uploadSpinner.classList.add("hidden");
 
         if (response.ok) {
-          activateKnowledgeUI(data.source_name, data.chunks_count, data.chunks);
+          activateKnowledgeUI(data.source_name, data.chunks_count, data.chunks, data.conversation_starter);
           urlInput.value = "";
         } else {
           alert(`URL Error: ${data.detail}`);

@@ -85,7 +85,8 @@ async def upload_any_file(
             "status": "success",
             "chunks_count": result["count"],
             "chunks": result["chunks"],
-            "source_name": result["source_name"]
+            "source_name": result["source_name"],
+            "conversation_starter": result["conversation_starter"]
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")
@@ -110,7 +111,8 @@ async def index_web_url(payload: UrlPayload):
             "status": "success",
             "chunks_count": result["count"],
             "chunks": result["chunks"],
-            "source_name": result["source_name"]
+            "source_name": result["source_name"],
+            "conversation_starter": result["conversation_starter"]
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to scrape & index URL: {str(e)}")

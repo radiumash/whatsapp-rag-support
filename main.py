@@ -133,7 +133,7 @@ async def playground_chat(payload: ChatPayload):
         namespace=payload.session_id
     )
 
-    updated_history = f"{history}\nUser: {payload.message}\nBot: {bot_reply}"[-2000:]
+    updated_history = f"{history}\nUser: {payload.message}\nBot: {bot_reply}"[-8000:]
     set_history(history_key, updated_history)
 
     return {"reply": bot_reply}
@@ -143,7 +143,7 @@ async def web_chat(payload: ChatPayload):
     history_key = f"web_chat:{payload.session_id}"
     history = get_history(history_key)
     bot_reply = generate_rag_response(payload.message, history, payload.session_id)
-    updated_history = f"{history}\nUser: {payload.message}\nBot: {bot_reply}"[-2000:]
+    updated_history = f"{history}\nUser: {payload.message}\nBot: {bot_reply}"[-8000:]
     set_history(history_key, updated_history)
     return {"reply": bot_reply}
 
@@ -181,7 +181,7 @@ async def receive_whatsapp(request: Request):
                 bot_reply = generate_rag_response(msg_body, history, from_number)
 
                 # Update Redis
-                updated_history = f"{history}\nUser: {msg_body}\nBot: {bot_reply}"[-2000:]
+                updated_history = f"{history}\nUser: {msg_body}\nBot: {bot_reply}"[-8000:]
                 redis_client.set(history_key, updated_history, ex=3600)
 
                 # Send WhatsApp reply

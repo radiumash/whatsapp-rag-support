@@ -1,5 +1,3 @@
-Here is a complete, production-ready `README.md` for your GitHub repository.
-
 # 💬 Multilingual WhatsApp & Multi-Source RAG Support System
 
 An intelligent, production-ready customer support system built with **FastAPI**, **LangChain**, **Pinecone**, and **OpenAI**. The system provides automated customer support over **WhatsApp Cloud API** and includes a **ChatGPT-style Web Playground** capable of indexing and chatting with PDFs, Excel sheets, CSVs, plain text, and live web URLs with native **English & Hinglish** (Hindi in Roman script) support.
